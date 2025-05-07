@@ -59,6 +59,16 @@ public class GameScreen implements Screen {
     private float timeSinceLastShot = 0;
     private float shootDelay = 0.6f;
 
+    // кнопка
+    private Texture fireButtonTexture;
+    private Texture fireButtonPressedTexture;
+
+    private Rectangle fireButton;
+
+    private boolean isFireButtonPressed = false;
+    private boolean wasFireButtonJustPressed = false;
+
+
     private int enemiesRemaining;
     private boolean gameWon;
     private BitmapFont font;
@@ -78,6 +88,8 @@ public class GameScreen implements Screen {
         wallTexture = new Texture("wall.png");
         backgroundTexture2 = new Texture("background2.png");
         backgroundTexture = new Texture("background.png");
+        fireButtonTexture = new Texture("fire_button.png");
+        fireButtonPressedTexture = new Texture("fire_button_pressed.png");
 
         // Инициализация игрока
         playerTank = new Rectangle();
@@ -122,6 +134,14 @@ public class GameScreen implements Screen {
             camera.viewportHeight/2 - 50, // y
             160,                          // width
             80                            // height
+        );
+
+        int buttonSize = 150; // Размер кнопки
+        fireButton = new Rectangle(
+            Gdx.graphics.getWidth() - buttonSize - 20,
+            20,
+            buttonSize,
+            buttonSize
         );
     }
 
@@ -190,10 +210,18 @@ public class GameScreen implements Screen {
         // Отрисовка
         game.batch.begin();
         font.draw(game.batch, "enemies: " + enemiesRemaining, 20, 450);
-        game.batch.setColor(Color.WHITE);
+        // кнопка fire
+        Texture fireTex = isFireButtonPressed ? fireButtonPressedTexture : fireButtonTexture;
+        game.batch.draw(
+            fireTex,
+            fireButton.x,
+            fireButton.y,
+            fireButton.width,
+            fireButton.height
+        );
+        font.draw(game.batch, "FIRE", fireButton.x + fireButton.width/3, fireButton.y + fireButton.height/2);
 
         // Фон
-        game.batch.draw(backgroundTexture2, 0, 0, 800, 480);
         game.batch.draw(backgroundTexture, 0, 0, 800, 480);
 
         // Стены
@@ -269,6 +297,36 @@ public class GameScreen implements Screen {
         // рулить танком
         handleInput(delta);
 
+        // состояние кнопки
+        wasFireButtonJustPressed = false;
+        for (int i = 0; i < 5; i++) {
+            if (Gdx.input.isTouched(i)) {
+                Vector3 touchPos = new Vector3(Gdx.input.getX(i), Gdx.input.getY(i), 0);
+                camera.unproject(touchPos); // Конвертируем в игровые координаты
+
+                if (fireButton.contains(touchPos.x, touchPos.y)) {
+                    if (!isFireButtonPressed) {
+                        wasFireButtonJustPressed = true; // Только что нажата
+                    }
+                    isFireButtonPressed = true;
+                    break;
+                }
+            }
+        }
+
+        if (!Gdx.input.isTouched()) {
+            isFireButtonPressed = false;
+        }
+
+        // Стрельба при нажатии
+        if (wasFireButtonJustPressed && timeSinceLastShot >= shootDelay) {
+            shoot();
+            timeSinceLastShot = 0;
+        }
+
+        timeSinceLastShot += delta;
+
+
         // обнова пуль
         updateBullets(delta);
 
@@ -277,6 +335,8 @@ public class GameScreen implements Screen {
 
         // проверка столкновений
         checkCollisions();
+
+
     }
     public void restartGame() {
         enemies.clear();
@@ -449,10 +509,10 @@ public class GameScreen implements Screen {
         for (Rectangle wall : walls) {
             if (playerTank.overlaps(wall)) {
                 // Простое "отталкивание" от стен
-                if (moveUp) playerTank.y -= 5;
-                if (moveDown) playerTank.y += 5;
-                if (moveLeft) playerTank.x += 5;
-                if (moveRight) playerTank.x -= 5;
+                if (moveUp) playerTank.y -= 1;
+                if (moveDown) playerTank.y += 1;
+                if (moveLeft) playerTank.x += 1;
+                if (moveRight) playerTank.x -= 1;
             }
         }
     }
@@ -507,6 +567,8 @@ public class GameScreen implements Screen {
         font.dispose();
         buttonTexture.dispose();
         whiteTexture.dispose();
+        fireButtonTexture.dispose();
+        fireButtonPressedTexture.dispose();
 
     }
 
