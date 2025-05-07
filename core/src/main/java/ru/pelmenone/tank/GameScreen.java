@@ -14,6 +14,8 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
 
+import javax.swing.JButton;
+
 public class GameScreen implements Screen {
     private final Main game;
     private OrthographicCamera camera;
@@ -24,6 +26,7 @@ public class GameScreen implements Screen {
     private Texture bulletTexture;
     private Texture wallTexture;
     private Texture backgroundTexture;
+    private Texture backgroundTexture2;
 
     // Игровые объекты
     private Rectangle playerTank;
@@ -40,7 +43,7 @@ public class GameScreen implements Screen {
     private int enemiesRemaining;
     private boolean gameWon;
     private BitmapFont font;
-    
+
     public GameScreen(final Main game) {
         this.game = game;
 
@@ -53,6 +56,7 @@ public class GameScreen implements Screen {
         enemyTexture = new Texture("enemy.png");
         bulletTexture = new Texture("bullet.png");
         wallTexture = new Texture("wall.png");
+        backgroundTexture2 = new Texture("background2.png");
         backgroundTexture = new Texture("background.png");
 
         // Инициализация игрока
@@ -129,7 +133,9 @@ public class GameScreen implements Screen {
         game.batch.begin();
         font.draw(game.batch, "enemies: " + enemiesRemaining, 20, 450);
 
+
         // Фон
+        game.batch.draw(backgroundTexture2, 0, 0, 800, 480);
         game.batch.draw(backgroundTexture, 0, 0, 800, 480);
 
         // Стены
@@ -154,12 +160,41 @@ public class GameScreen implements Screen {
             font.draw(game.batch, "WIN",
                 camera.viewportWidth/2 - 30,
                 camera.viewportHeight/2);
+
+            font.draw(game.batch, "Tap to continue",
+                camera.viewportWidth/2 - 120,
+                camera.viewportHeight/2 - 50);
+
+
+
         }
 
         game.batch.end();
     }
 
+
+
     private void update(float delta) {
+        if (gameWon) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+                restartGame();
+            }
+            return;
+
+        }
+        if (gameWon && Gdx.input.justTouched()) {
+            Vector3 touchPos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+            camera.unproject(touchPos);
+
+            // Проверяем нажатие на кнопку
+            if (touchPos.x > camera.viewportWidth/2 - 80 &&
+                touchPos.x < camera.viewportWidth/2 + 80 &&
+                touchPos.y > camera.viewportHeight/2 - 50 &&
+                touchPos.y < camera.viewportHeight/2 + 30) {
+                restartGame();
+            }
+        }
+
         timeSinceLastShot += delta;
 
         // Управление танком
@@ -173,6 +208,16 @@ public class GameScreen implements Screen {
 
         // Проверка столкновений
         checkCollisions();
+    }
+    private void restartGame() {
+        enemies.clear();
+        bullets.clear();
+        spawnEnemies(1);
+        enemiesRemaining = enemies.size;
+        gameWon = false;
+
+        playerTank.x = 100;
+        playerTank.y = 100;
     }
 
     private void handleInput(float delta) {
