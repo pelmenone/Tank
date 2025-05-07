@@ -23,8 +23,17 @@ import javax.swing.JButton;
 public class GameScreen implements Screen {
     private final Main game;
     private OrthographicCamera camera;
+    private enum MovementDirection {
+        NONE,
+        UP,
+        DOWN,
+        LEFT,
+        RIGHT
+    }
+    private MovementDirection currentDirection = MovementDirection.NONE;
+    private MovementDirection lastPressedDirection = MovementDirection.NONE;
 
-    // Текстуры
+    // текстуры
     private Texture tankTexture;
     private Texture enemyTexture;
     private Texture bulletTexture;
@@ -35,13 +44,16 @@ public class GameScreen implements Screen {
     private Texture whiteTexture;
     private Rectangle restartButton;
 
-    // Игровые объекты
+    // вращение текстуры
+    private float tankRotation = 0;
+
+    // объекты
     private Rectangle playerTank;
     private Array<Rectangle> enemies;
     private Array<Rectangle> walls;
     private Array<Bullet> bullets;
 
-    // Управление
+    // управление
     private boolean moveUp, moveDown, moveLeft, moveRight;
     private float playerSpeed = 100f;
     private float timeSinceLastShot = 0;
@@ -50,6 +62,7 @@ public class GameScreen implements Screen {
     private int enemiesRemaining;
     private boolean gameWon;
     private BitmapFont font;
+
 
     public GameScreen(final Main game) {
         this.game = game;
@@ -134,12 +147,28 @@ public class GameScreen implements Screen {
             wall.height = 40;
             walls.add(wall);
         }
+        for (int i = 0; i < 10; i++) {
+            Rectangle wall = new Rectangle();
+            wall.x = 490 + i * 40;
+            wall.y = 300;
+            wall.width = 40;
+            wall.height = 40;
+            walls.add(wall);
+        }
 
         // Вертикальные стены
         for (int i = 0; i < 5; i++) {
             Rectangle wall = new Rectangle();
             wall.x = 400;
             wall.y = 300 + i * 40;
+            wall.width = 40;
+            wall.height = 40;
+            walls.add(wall);
+        }
+        for (int i = 0; i < 2; i++) {
+            Rectangle wall = new Rectangle();
+            wall.x = 200;
+            wall.y = 400 + i * 40;
             wall.width = 40;
             wall.height = 40;
             walls.add(wall);
@@ -161,7 +190,7 @@ public class GameScreen implements Screen {
         // Отрисовка
         game.batch.begin();
         font.draw(game.batch, "enemies: " + enemiesRemaining, 20, 450);
-
+        game.batch.setColor(Color.WHITE);
 
         // Фон
         game.batch.draw(backgroundTexture2, 0, 0, 800, 480);
@@ -173,7 +202,16 @@ public class GameScreen implements Screen {
         }
 
         // Игрок
-        game.batch.draw(tankTexture, playerTank.x, playerTank.y, playerTank.width, playerTank.height);
+        float textureBaseRotation = 90;;
+        game.batch.draw(tankTexture,
+            playerTank.x, playerTank.y,          // Позиция
+            playerTank.width/2, playerTank.height/2, // Точка вращения (центр)
+            playerTank.width, playerTank.height,  // Размер
+            1, 1,                                // Масштаб
+            tankRotation,                        // Угол поворота
+            0, 0,                                // Область текстуры (srcX, srcY)
+            tankTexture.getWidth(), tankTexture.getHeight(), // Размер текстуры
+            false, false);                       // Отражать по X/Y?
 
         // Враги
         for (Rectangle enemy : enemies) {
@@ -186,31 +224,18 @@ public class GameScreen implements Screen {
         }
 
         if (gameWon) {
-            font.draw(game.batch, "WIN",
-                camera.viewportWidth/2 - 30,
-                camera.viewportHeight/2);
+            //font.draw(game.batch, "WIN", camera.viewportWidth/2 - 30, camera.viewportHeight/2);
 
-            font.draw(game.batch, "Tap to continue",
-                camera.viewportWidth/2 - 120,
-                camera.viewportHeight/2 - 50);
+            font.draw(game.batch, "AGAIN",
+                camera.viewportWidth/2 - 70,
+                camera.viewportHeight/2 - 140);
 
-            game.batch.setColor(1, 1, 1, 0.7f); // Прозрачность 70%
+            game.batch.setColor(1, 1, 1, 0.1f); // Прозрачность 70%
             game.batch.draw(whiteTexture,
-                camera.viewportWidth/2,
-                camera.viewportHeight/2 - 200,
+                camera.viewportWidth/2 -100,
+                camera.viewportHeight/2 -200,
                 200, 100);
             game.batch.setColor(Color.WHITE); // Возвращаем обычный цвет
-
-            // Рисуем кнопку
-            game.batch.draw(buttonTexture,
-                camera.viewportWidth/2 - 80,
-                camera.viewportHeight/2 - 100,
-                160, 80);
-
-            // Текст на кнопке
-            font.draw(game.batch, "AGAIN",
-                camera.viewportWidth/2 - 40,
-                camera.viewportHeight/2 - 50);
 
         }
 
@@ -241,16 +266,16 @@ public class GameScreen implements Screen {
 
         timeSinceLastShot += delta;
 
-        // Управление танком
+        // рулить танком
         handleInput(delta);
 
-        // Обновление пуль
+        // обнова пуль
         updateBullets(delta);
 
-        // ИИ врагов
+        // враги муваются
         updateEnemies(delta);
 
-        // Проверка столкновений
+        // проверка столкновений
         checkCollisions();
     }
     public void restartGame() {
@@ -265,25 +290,79 @@ public class GameScreen implements Screen {
     }
 
     private void handleInput(float delta) {
-        // Движение
-        if (moveUp) playerTank.y += playerSpeed * delta;
-        if (moveDown) playerTank.y -= playerSpeed * delta;
-        if (moveLeft) playerTank.x -= playerSpeed * delta;
-        if (moveRight) playerTank.x += playerSpeed * delta;
+        boolean moved = false;
+        if (Gdx.input.isKeyJustPressed(Input.Keys.UP) || Gdx.input.isKeyJustPressed(Input.Keys.W)) {
+            lastPressedDirection = MovementDirection.UP;
+            tankRotation = 90; // Поворот вверх (0 градусов)
+            moved = true;
+        }
+        else if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN) || Gdx.input.isKeyJustPressed(Input.Keys.S)) {
+            lastPressedDirection = MovementDirection.DOWN;
+            tankRotation = 270; // Поворот вверх (0 градусов)
+            moved = true;
+        }
+        else if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT) || Gdx.input.isKeyJustPressed(Input.Keys.A)) {
+            lastPressedDirection = MovementDirection.LEFT;
+            tankRotation = 180; // Поворот вверх (0 градусов)
+            moved = true;
+        }
+        else if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT) || Gdx.input.isKeyJustPressed(Input.Keys.D)) {
+            lastPressedDirection = MovementDirection.RIGHT;
+            tankRotation = 0; // Поворот вверх (0 градусов)
+            moved = true;
+        }
 
-        // Ограничение движения в пределах экрана
+        boolean upPressed = Gdx.input.isKeyPressed(Input.Keys.UP) || Gdx.input.isKeyPressed(Input.Keys.W);
+        boolean downPressed = Gdx.input.isKeyPressed(Input.Keys.DOWN) || Gdx.input.isKeyPressed(Input.Keys.S);
+        boolean leftPressed = Gdx.input.isKeyPressed(Input.Keys.LEFT) || Gdx.input.isKeyPressed(Input.Keys.A);
+        boolean rightPressed = Gdx.input.isKeyPressed(Input.Keys.RIGHT) || Gdx.input.isKeyPressed(Input.Keys.D);
+
+        if (!upPressed && !downPressed && !leftPressed && !rightPressed) {
+            currentDirection = MovementDirection.NONE;
+        }
+        else if ((upPressed ? 1 : 0) + (downPressed ? 1 : 0) +
+            (leftPressed ? 1 : 0) + (rightPressed ? 1 : 0) == 1) {
+            if (upPressed) currentDirection = MovementDirection.UP;
+            else if (downPressed) currentDirection = MovementDirection.DOWN;
+            else if (leftPressed) currentDirection = MovementDirection.LEFT;
+            else if (rightPressed) currentDirection = MovementDirection.RIGHT;
+        }
+        else {
+            currentDirection = lastPressedDirection;
+        }
+
+        switch (currentDirection) {
+            case UP:
+                playerTank.y += playerSpeed * delta;
+                break;
+            case DOWN:
+                playerTank.y -= playerSpeed * delta;
+                break;
+            case LEFT:
+                playerTank.x -= playerSpeed * delta;
+                break;
+            case RIGHT:
+                playerTank.x += playerSpeed * delta;
+                break;
+            case NONE:
+                break;
+        }
+
+        playerTank.x = Math.max(0, Math.min(800 - playerTank.width, playerTank.x));
+        playerTank.y = Math.max(0, Math.min(480 - playerTank.height, playerTank.y));
+
         if (playerTank.x < 0) playerTank.x = 0;
         if (playerTank.x > 800 - playerTank.width) playerTank.x = 800 - playerTank.width;
         if (playerTank.y < 0) playerTank.y = 0;
         if (playerTank.y > 480 - playerTank.height) playerTank.y = 480 - playerTank.height;
 
-        // Стрельба
+        // стрельба
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) && timeSinceLastShot >= shootDelay) {
             shoot();
             timeSinceLastShot = 0;
         }
 
-        // Обработка касаний для мобильных устройств
+        // для мобилы
         if (Gdx.input.isTouched()) {
             Vector3 touchPos = new Vector3();
             touchPos.set(Gdx.input.getX(), Gdx.input.getY(), 0);
@@ -311,7 +390,7 @@ public class GameScreen implements Screen {
         bullet.rect.width = 20;
         bullet.rect.height = 20;
         bullet.direction = new Vector2(1, 0);
-        bullet.speed = 400f;
+        bullet.speed = 500f;
         bullets.add(bullet);
     }
 
