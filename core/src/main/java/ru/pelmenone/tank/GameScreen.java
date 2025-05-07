@@ -1,10 +1,14 @@
 package ru.pelmenone.tank;
 
+import static javax.management.Query.or;
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -27,6 +31,9 @@ public class GameScreen implements Screen {
     private Texture wallTexture;
     private Texture backgroundTexture;
     private Texture backgroundTexture2;
+    private Texture buttonTexture;
+    private Texture whiteTexture;
+    private Rectangle restartButton;
 
     // Игровые объекты
     private Rectangle playerTank;
@@ -82,7 +89,29 @@ public class GameScreen implements Screen {
 
         font = new BitmapFont();
         font.getData().setScale(3);
+
+        Pixmap buttonPixmap = new Pixmap(160, 80, Pixmap.Format.RGBA8888);
+        buttonPixmap.setColor(0.2f, 0.8f, 0.2f, 1); // Зеленый цвет
+        buttonPixmap.fillRectangle(0, 0, 160, 80);
+        buttonPixmap.setColor(Color.WHITE);
+        buttonPixmap.drawRectangle(0, 0, 160, 80); // Белая рамка
+        buttonTexture = new Texture(buttonPixmap);
+        buttonPixmap.dispose();
+
+        Pixmap whitePixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        whitePixmap.setColor(Color.WHITE);
+        whitePixmap.fill();
+        whiteTexture = new Texture(whitePixmap);
+        whitePixmap.dispose();
+
+        restartButton = new Rectangle(
+            camera.viewportWidth/2 - 80,  // x
+            camera.viewportHeight/2 - 50, // y
+            160,                          // width
+            80                            // height
+        );
     }
+
 
     private void spawnEnemies(int count) {
         for (int i = 0; i < count; i++) {
@@ -165,7 +194,23 @@ public class GameScreen implements Screen {
                 camera.viewportWidth/2 - 120,
                 camera.viewportHeight/2 - 50);
 
+            game.batch.setColor(1, 1, 1, 0.7f); // Прозрачность 70%
+            game.batch.draw(whiteTexture,
+                camera.viewportWidth/2,
+                camera.viewportHeight/2 - 200,
+                200, 100);
+            game.batch.setColor(Color.WHITE); // Возвращаем обычный цвет
 
+            // Рисуем кнопку
+            game.batch.draw(buttonTexture,
+                camera.viewportWidth/2 - 80,
+                camera.viewportHeight/2 - 100,
+                160, 80);
+
+            // Текст на кнопке
+            font.draw(game.batch, "AGAIN",
+                camera.viewportWidth/2 - 40,
+                camera.viewportHeight/2 - 50);
 
         }
 
@@ -176,23 +221,22 @@ public class GameScreen implements Screen {
 
     private void update(float delta) {
         if (gameWon) {
-            if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+            // Проверка для мобильных устройств (касание экрана)
+            boolean mobileTouch = false;
+            if (Gdx.input.justTouched()) {
+                Vector3 touchPos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+                camera.unproject(touchPos);
+                mobileTouch = restartButton.contains(touchPos.x, touchPos.y);
+            }
+
+            // Проверка для ПК (клавиша E)
+            boolean pcInput = Gdx.input.isKeyJustPressed(Input.Keys.E);
+
+            // Если любое из условий выполнено - перезапускаем игру
+            if (mobileTouch || pcInput) {
                 restartGame();
             }
             return;
-
-        }
-        if (gameWon && Gdx.input.justTouched()) {
-            Vector3 touchPos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
-            camera.unproject(touchPos);
-
-            // Проверяем нажатие на кнопку
-            if (touchPos.x > camera.viewportWidth/2 - 80 &&
-                touchPos.x < camera.viewportWidth/2 + 80 &&
-                touchPos.y > camera.viewportHeight/2 - 50 &&
-                touchPos.y < camera.viewportHeight/2 + 30) {
-                restartGame();
-            }
         }
 
         timeSinceLastShot += delta;
@@ -209,7 +253,7 @@ public class GameScreen implements Screen {
         // Проверка столкновений
         checkCollisions();
     }
-    private void restartGame() {
+    public void restartGame() {
         enemies.clear();
         bullets.clear();
         spawnEnemies(1);
@@ -382,6 +426,9 @@ public class GameScreen implements Screen {
         wallTexture.dispose();
         backgroundTexture.dispose();
         font.dispose();
+        buttonTexture.dispose();
+        whiteTexture.dispose();
+
     }
 
     static class Bullet {
