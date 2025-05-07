@@ -37,10 +37,10 @@ public class GameScreen implements Screen {
     private float timeSinceLastShot = 0;
     private float shootDelay = 0.6f;
 
-    private int enemyCount;
+    private int enemiesRemaining;
     private boolean gameWon;
     private BitmapFont font;
-
+    
     public GameScreen(final Main game) {
         this.game = game;
 
@@ -64,7 +64,7 @@ public class GameScreen implements Screen {
 
         // Инициализация врагов
         enemies = new Array<>();
-        spawnEnemies(30);
+        spawnEnemies(2);
 
         // Инициализация стен
         walls = new Array<>();
@@ -72,6 +72,12 @@ public class GameScreen implements Screen {
 
         // Инициализация пуль
         bullets = new Array<>();
+
+        enemiesRemaining = enemies.size;
+        gameWon = false;
+
+        font = new BitmapFont();
+        font.getData().setScale(3);
     }
 
     private void spawnEnemies(int count) {
@@ -121,6 +127,7 @@ public class GameScreen implements Screen {
 
         // Отрисовка
         game.batch.begin();
+        font.draw(game.batch, "enemies: " + enemiesRemaining, 20, 450);
 
         // Фон
         game.batch.draw(backgroundTexture, 0, 0, 800, 480);
@@ -141,6 +148,12 @@ public class GameScreen implements Screen {
         // Пули
         for (Bullet bullet : bullets) {
             game.batch.draw(bulletTexture, bullet.rect.x, bullet.rect.y, bullet.rect.width, bullet.rect.height);
+        }
+
+        if (gameWon) {
+            font.draw(game.batch, "WIN",
+                camera.viewportWidth/2 - 30,
+                camera.viewportHeight/2);
         }
 
         game.batch.end();
@@ -246,6 +259,11 @@ public class GameScreen implements Screen {
                 if (bullet.rect.overlaps(enemies.get(j))) {
                     bullets.removeIndex(i);
                     enemies.removeIndex(j);
+                    enemiesRemaining--;
+
+                    if (enemiesRemaining <= 0) {
+                        gameWon = true;
+                    }
                     break;
                 }
             }
@@ -318,6 +336,7 @@ public class GameScreen implements Screen {
         bulletTexture.dispose();
         wallTexture.dispose();
         backgroundTexture.dispose();
+        font.dispose();
     }
 
     static class Bullet {
@@ -326,4 +345,5 @@ public class GameScreen implements Screen {
         float speed;
     }
     }
+
 
