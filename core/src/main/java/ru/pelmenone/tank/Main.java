@@ -3,8 +3,11 @@ package ru.pelmenone.tank;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
+import javax.swing.SwingWorker;
+
 public class Main extends Game {
     public SpriteBatch batch;
+    public SwingWorker<Object, Object> assets;
 
     @Override
     public void create() {

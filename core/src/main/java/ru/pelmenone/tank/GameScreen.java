@@ -469,12 +469,58 @@ public class GameScreen implements Screen {
     }
 
     private void updateEnemies(float delta) {
-        // Простое ИИ: двигаться к игроку
         for (Rectangle enemy : enemies) {
             if (enemy.x < playerTank.x) enemy.x += 50 * delta;
             if (enemy.x > playerTank.x) enemy.x -= 50 * delta;
             if (enemy.y < playerTank.y) enemy.y += 50 * delta;
             if (enemy.y > playerTank.y) enemy.y -= 50 * delta;
+        }
+
+        for (Rectangle enemy : enemies) {
+            // Рассчитываем направление к игроку
+            Vector2 direction = new Vector2(
+                playerTank.x - enemy.x,
+                playerTank.y - enemy.y
+            ).nor(); // Нормализуем вектор
+
+            // Сохраняем старую позицию
+            float oldX = enemy.x;
+            float oldY = enemy.y;
+
+            // Двигаем врага
+            float enemySpeed = 0;
+            enemy.x += direction.x * enemySpeed * delta;
+            enemy.y += direction.y * enemySpeed * delta;
+
+            // Проверка столкновений со стенами
+            for (Rectangle wall : walls) {
+                if (enemy.overlaps(wall)) {
+                    // Вычисляем вектор отталкивания
+                    Vector2 push = new Vector2();
+
+                    // Определяем сторону столкновения
+                    float overlapX = Math.min(
+                        enemy.x + enemy.width - wall.x,
+                        wall.x + wall.width - enemy.x
+                    );
+
+                    float overlapY = Math.min(
+                        enemy.y + enemy.height - wall.y,
+                        wall.y + wall.height - enemy.y
+                    );
+
+                    // Отталкиваем по меньшему пересечению
+                    if (overlapX < overlapY) {
+                        push.x = (enemy.x < wall.x) ? -overlapX : overlapX;
+                    } else {
+                        push.y = (enemy.y < wall.y) ? -overlapY : overlapY;
+                    }
+
+                    // Применяем отталкивание
+                    enemy.x += push.x * 1f;
+                    enemy.y += push.y * 1f;
+                }
+            }
         }
     }
 
