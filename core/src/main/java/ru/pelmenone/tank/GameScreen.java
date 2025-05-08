@@ -2,11 +2,13 @@ package ru.pelmenone.tank;
 
 import static javax.management.Query.or;
 
+import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
@@ -32,6 +34,10 @@ public class GameScreen implements Screen {
     }
     private MovementDirection currentDirection = MovementDirection.NONE;
     private MovementDirection lastPressedDirection = MovementDirection.NONE;
+
+    // мир
+    private static final float WORLD_WIDTH = 1280; // Логическая ширина мира
+    private static final float WORLD_HEIGHT = 720; // Логическая высота
 
     // текстуры
     private Texture tankTexture;
@@ -90,6 +96,7 @@ public class GameScreen implements Screen {
         backgroundTexture = new Texture("background.png");
         fireButtonTexture = new Texture("fire_button.png");
         fireButtonPressedTexture = new Texture("fire_button_pressed.png");
+        playerTank = new Rectangle(100, 100, 80, 80);
 
         // Инициализация игрока
         playerTank = new Rectangle();
@@ -97,6 +104,10 @@ public class GameScreen implements Screen {
         playerTank.y = 100;
         playerTank.width = 40;
         playerTank.height = 40;
+        if (Gdx.app.getType() == Application.ApplicationType.Android) {
+            // Специфичные настройки для Android
+            float uiScale = 1.5f; // Увеличиваем UI на мобильных
+        }
 
         // Инициализация врагов
         enemies = new Array<>();
@@ -198,7 +209,7 @@ public class GameScreen implements Screen {
     @Override
     public void render(float delta) {
         // Очистка экрана
-        ScreenUtils.clear(0, 0, 0, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         // Обновление
         update(delta);
@@ -269,8 +280,6 @@ public class GameScreen implements Screen {
 
         game.batch.end();
     }
-
-
 
     private void update(float delta) {
         if (gameWon) {
