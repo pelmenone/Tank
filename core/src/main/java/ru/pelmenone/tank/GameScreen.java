@@ -511,7 +511,7 @@ public class GameScreen implements Screen {
         bullet.speed = 500f;
         bullets.add(bullet);
         // звук выстрела
-        sounds.shootSound.play(0.5f, MathUtils.random(0.2f, 0.1f), 0f);
+        sounds.shootSound.play(0.5f, MathUtils.random(0.8f, 1.1f), 0f);
     }
 
     private void updateBullets(float delta) {
@@ -591,7 +591,7 @@ public class GameScreen implements Screen {
 
             for (int j = enemies.size - 1; j >= 0; j--) {
                 if (bullet.rect.overlaps(enemies.get(j))) {
-                    sounds.enemyHitSound.play(0.5f, MathUtils.random(0.9f, 1.1f), 0f);
+                    sounds.enemyHitSound.play(0.5f, MathUtils.random(0.1f, 0.3f), 0f);
                     bullets.removeIndex(i);
                     enemies.removeIndex(j);
                     enemiesRemaining--;
@@ -606,7 +606,7 @@ public class GameScreen implements Screen {
             // Проверка столкновений пуль со стенами
             for (Rectangle wall : walls) {
                 if (bullet.rect.overlaps(wall)) {
-                    sounds.wallHitSound.play(0.5f, MathUtils.random(0.9f, 1.1f), 0f);
+                    sounds.wallHitSound.play(0.5f, MathUtils.random(0.4f, 0.7f), 0f);
                     bullets.removeIndex(i);
                     break;
                 }
