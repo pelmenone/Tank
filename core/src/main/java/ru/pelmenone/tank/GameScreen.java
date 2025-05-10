@@ -14,6 +14,7 @@ import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
@@ -50,6 +51,9 @@ public class GameScreen implements Screen {
     private Texture buttonTexture;
     private Texture whiteTexture;
     private Rectangle restartButton;
+
+    // звуки
+    private SoundManager sounds;
 
     // вращение текстуры
     private float tankRotation = 0;
@@ -389,7 +393,7 @@ public class GameScreen implements Screen {
     public void restartGame() {
         enemies.clear();
         bullets.clear();
-        spawnEnemies(1);
+        spawnEnemies(5);
         enemiesRemaining = enemies.size;
         gameWon = false;
 
@@ -493,13 +497,21 @@ public class GameScreen implements Screen {
     private void shoot() {
         Bullet bullet = new Bullet();
         bullet.rect = new Rectangle();
-        bullet.rect.x = playerTank.x + playerTank.width/2 - 5;
-        bullet.rect.y = playerTank.y + playerTank.height/2 - 5;
+        bullet.rect.x = playerTank.x + playerTank.width/2;
+        bullet.rect.y = playerTank.y + playerTank.height/2;
+
         bullet.rect.width = 20;
         bullet.rect.height = 20;
         bullet.direction = new Vector2(1, 0);
+        float angleRad = (float)Math.toRadians(tankRotation);
+
+        // Направление выстрела (единичный вектор)
+        bullet.directionX = (float)Math.sin(angleRad);
+        bullet.directionY = (float)Math.cos(angleRad);
         bullet.speed = 500f;
         bullets.add(bullet);
+        // звук выстрела
+        sounds.shootSound.play(0.5f, MathUtils.random(0.2f, 0.1f), 0f);
     }
 
     private void updateBullets(float delta) {
@@ -579,6 +591,7 @@ public class GameScreen implements Screen {
 
             for (int j = enemies.size - 1; j >= 0; j--) {
                 if (bullet.rect.overlaps(enemies.get(j))) {
+                    sounds.enemyHitSound.play(0.5f, MathUtils.random(0.9f, 1.1f), 0f);
                     bullets.removeIndex(i);
                     enemies.removeIndex(j);
                     enemiesRemaining--;
@@ -593,6 +606,7 @@ public class GameScreen implements Screen {
             // Проверка столкновений пуль со стенами
             for (Rectangle wall : walls) {
                 if (bullet.rect.overlaps(wall)) {
+                    sounds.wallHitSound.play(0.5f, MathUtils.random(0.9f, 1.1f), 0f);
                     bullets.removeIndex(i);
                     break;
                 }
@@ -633,6 +647,10 @@ public class GameScreen implements Screen {
                 return true;
             }
         });
+
+        // звуки
+        sounds = new SoundManager();
+        sounds.load();
     }
 
     @Override
@@ -658,6 +676,7 @@ public class GameScreen implements Screen {
         bulletTexture.dispose();
         wallTexture.dispose();
         kustTexture.dispose();
+        sounds.dispose();
         backgroundTexture.dispose();
         font.dispose();
         buttonTexture.dispose();
@@ -668,10 +687,14 @@ public class GameScreen implements Screen {
     }
 
     static class Bullet {
+        public float directionX;
+        public float directionY;
         Rectangle rect;
         Vector2 direction;
         float speed;
     }
     }
+
+
 
 
