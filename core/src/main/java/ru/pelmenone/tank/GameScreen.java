@@ -44,6 +44,7 @@ public class GameScreen implements Screen {
     private Texture enemyTexture;
     private Texture bulletTexture;
     private Texture wallTexture;
+    private Texture kustTexture;
     private Texture backgroundTexture;
     private Texture backgroundTexture2;
     private Texture buttonTexture;
@@ -57,6 +58,7 @@ public class GameScreen implements Screen {
     private Rectangle playerTank;
     private Array<Rectangle> enemies;
     private Array<Rectangle> walls;
+    private Array<Rectangle> kusts;
     private Array<Bullet> bullets;
 
     // управление
@@ -92,6 +94,7 @@ public class GameScreen implements Screen {
         enemyTexture = new Texture("enemy.png");
         bulletTexture = new Texture("bullet.png");
         wallTexture = new Texture("wall.png");
+        kustTexture = new Texture("kust.png");
         backgroundTexture2 = new Texture("background2.png");
         backgroundTexture = new Texture("background.png");
         fireButtonTexture = new Texture("fire_button.png");
@@ -116,6 +119,8 @@ public class GameScreen implements Screen {
         // Инициализация стен
         walls = new Array<>();
         createWalls();
+        kusts = new Array<>();
+        createKusts();
 
         // Инициализация пуль
         bullets = new Array<>();
@@ -186,6 +191,15 @@ public class GameScreen implements Screen {
             wall.height = 40;
             walls.add(wall);
         }
+        // Горизонтальные стены
+        for (int i = 0; i < 10; i++) {
+            Rectangle wall = new Rectangle();
+            wall.x = 490 + i * 40;
+            wall.y = 300;
+            wall.width = 40;
+            wall.height = 40;
+            walls.add(wall);
+        }
 
         // Вертикальные стены
         for (int i = 0; i < 5; i++) {
@@ -203,6 +217,28 @@ public class GameScreen implements Screen {
             wall.width = 40;
             wall.height = 40;
             walls.add(wall);
+        }
+    }
+
+    private void createKusts() {
+        // kusts горизонт
+        for (int i = 0; i < 3; i++) {
+            Rectangle kust = new Rectangle();
+            kust.x = 0 + i * 40;
+            kust.y = 60;
+            kust.width = 40;
+            kust.height = 40;
+            kusts.add(kust);
+        }
+
+        // kusts вертик
+        for (int i = 0; i < 5; i++) {
+            Rectangle kust = new Rectangle();
+            kust.x = 40;
+            kust.y = 60 + i * 40;
+            kust.width = 40;
+            kust.height = 40;
+            kusts.add(kust);
         }
     }
 
@@ -238,6 +274,9 @@ public class GameScreen implements Screen {
         // Стены
         for (Rectangle wall : walls) {
             game.batch.draw(wallTexture, wall.x, wall.y, wall.width, wall.height);
+        }
+        for (Rectangle kust : kusts) {
+            game.batch.draw(kustTexture, kust.x, kust.y, kust.width, kust.height);
         }
 
         // Игрок
@@ -618,6 +657,7 @@ public class GameScreen implements Screen {
         enemyTexture.dispose();
         bulletTexture.dispose();
         wallTexture.dispose();
+        kustTexture.dispose();
         backgroundTexture.dispose();
         font.dispose();
         buttonTexture.dispose();
