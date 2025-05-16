@@ -73,13 +73,8 @@ public class GameScreen implements Screen {
 
     // кнопка
     private Texture fireButtonTexture;
-    private Texture fireButtonPressedTexture;
-
-    private Rectangle fireButton;
-
+    private Rectangle fireButtonBounds;
     private boolean isFireButtonPressed = false;
-    private boolean wasFireButtonJustPressed = false;
-
 
     private int enemiesRemaining;
     private boolean gameWon;
@@ -101,8 +96,6 @@ public class GameScreen implements Screen {
         kustTexture = new Texture("kust.png");
         backgroundTexture2 = new Texture("background2.png");
         backgroundTexture = new Texture("background.png");
-        fireButtonTexture = new Texture("fire_button.png");
-        fireButtonPressedTexture = new Texture("fire_button_pressed.png");
         playerTank = new Rectangle(100, 100, 80, 80);
 
         // Инициализация игрока
@@ -157,12 +150,6 @@ public class GameScreen implements Screen {
         );
 
         int buttonSize = 150; // Размер кнопки
-        fireButton = new Rectangle(
-            Gdx.graphics.getWidth() - buttonSize - 20,
-            20,
-            buttonSize,
-            buttonSize
-        );
     }
 
 
@@ -260,17 +247,6 @@ public class GameScreen implements Screen {
 
         // Отрисовка
         game.batch.begin();
-        font.draw(game.batch, "enemies: " + enemiesRemaining, 20, 450);
-        // кнопка fire
-        Texture fireTex = isFireButtonPressed ? fireButtonPressedTexture : fireButtonTexture;
-        game.batch.draw(
-            fireTex,
-            fireButton.x,
-            fireButton.y,
-            fireButton.width,
-            fireButton.height
-        );
-        font.draw(game.batch, "FIRE", fireButton.x + fireButton.width/3, fireButton.y + fireButton.height/2);
 
         // Фон
         game.batch.draw(backgroundTexture, 0, 0, 800, 480);
@@ -321,6 +297,31 @@ public class GameScreen implements Screen {
 
         }
 
+        font.draw(game.batch, "enemies: " + enemiesRemaining, 20, 450);
+
+        if (isFireButtonPressed) {
+            game.batch.setColor(0.7f, 0.7f, 0.7f, 0.7f); // Темнее при нажатии
+        } else {
+            game.batch.setColor(1, 1, 1, 0.7f); // Полупрозрачная
+        }
+
+        game.batch.draw(fireButtonTexture,
+            fireButtonBounds.x,
+            fireButtonBounds.y,
+            fireButtonBounds.width,
+            fireButtonBounds.height);
+
+        // Возвращаем стандартный цвет
+        game.batch.setColor(Color.WHITE);
+
+        // Рисуем букву "E" по центру кнопки
+        String eText = "SPACE";
+        float textWidth = font.getData().getGlyph('E').width * font.getScaleX();
+        float textHeight = font.getCapHeight() * font.getScaleY();
+        font.draw(game.batch, eText,
+            fireButtonBounds.x + (fireButtonBounds.width - textWidth)/2,
+            fireButtonBounds.y + (fireButtonBounds.height + textHeight)/2);
+
         game.batch.end();
     }
 
@@ -344,36 +345,32 @@ public class GameScreen implements Screen {
             return;
         }
 
+        isFireButtonPressed = false;
+
+        // Проверяем все точки касания (мультитач)
+        for (int i = 0; i < 5; i++) {
+            if (Gdx.input.isTouched(i)) {
+                Vector3 touchPos = new Vector3(Gdx.input.getX(i), Gdx.input.getY(i), 0);
+                camera.unproject(touchPos); // Переводим в игровые координаты
+
+                if (fireButtonBounds.contains(touchPos.x, touchPos.y)) {
+                    isFireButtonPressed = true;
+                    shoot();
+                }
+            }
+        }
+
         timeSinceLastShot += delta;
 
         // рулить танком
         handleInput(delta);
 
         // состояние кнопки
-        wasFireButtonJustPressed = false;
         for (int i = 0; i < 5; i++) {
             if (Gdx.input.isTouched(i)) {
                 Vector3 touchPos = new Vector3(Gdx.input.getX(i), Gdx.input.getY(i), 0);
                 camera.unproject(touchPos); // Конвертируем в игровые координаты
-
-                if (fireButton.contains(touchPos.x, touchPos.y)) {
-                    if (!isFireButtonPressed) {
-                        wasFireButtonJustPressed = true; // Только что нажата
-                    }
-                    isFireButtonPressed = true;
-                    break;
-                }
             }
-        }
-
-        if (!Gdx.input.isTouched()) {
-            isFireButtonPressed = false;
-        }
-
-        // Стрельба при нажатии
-        if (wasFireButtonJustPressed && timeSinceLastShot >= shootDelay) {
-            shoot();
-            timeSinceLastShot = 0;
         }
 
         timeSinceLastShot += delta;
@@ -651,6 +648,31 @@ public class GameScreen implements Screen {
         // звуки
         sounds = new SoundManager();
         sounds.load();
+
+        // Создаем полупрозрачную серую текстуру для кнопки
+        Pixmap pixmap = new Pixmap(200, 200, Pixmap.Format.RGBA8888);
+
+        pixmap.setColor(0.5f, 0.5f, 0.5f, 0.5f);
+        pixmap.fillCircle(100, 100, 90);
+
+        pixmap.setColor(1, 1, 1, 0.3f);
+        pixmap.drawCircle(100, 100, 90);
+
+        fireButtonTexture = new Texture(pixmap);
+        pixmap.dispose();
+
+        float buttonSize = Gdx.graphics.getWidth() * 0.15f;
+        fireButtonBounds = new Rectangle(
+            Gdx.graphics.getWidth() - buttonSize - 20,
+            20,
+            buttonSize,
+            buttonSize
+        );
+
+        // Простой шрифт для буквы "E"
+        font = new BitmapFont();
+        font.getData().setScale(3f); // Увеличиваем размер
+        font.setColor(Color.WHITE); // Белый цвет
     }
 
     @Override
@@ -682,8 +704,6 @@ public class GameScreen implements Screen {
         buttonTexture.dispose();
         whiteTexture.dispose();
         fireButtonTexture.dispose();
-        fireButtonPressedTexture.dispose();
-
     }
 
     static class Bullet {
