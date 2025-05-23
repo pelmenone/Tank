@@ -1,7 +1,5 @@
 package ru.pelmenone.tank;
 
-import static javax.management.Query.or;
-
 import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -13,17 +11,11 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.ScreenUtils;
-import java.util.Timer;
-import java.util.TimerTask;
-
-import javax.swing.JButton;
 
 public class GameScreen implements Screen {
     private final Main game;
@@ -59,6 +51,7 @@ public class GameScreen implements Screen {
 
     // вращение текстуры
     private float tankRotation = 0;
+    private float bulletRotation = 0;
 
     // объекты
     private Rectangle playerTank;
@@ -239,12 +232,8 @@ public class GameScreen implements Screen {
 
     @Override
     public void render(float delta) {
-        timer += delta; // Увеличиваем таймер на время, прошедшее с прошлого кадра
+        checkPlatform();
 
-        if (timer >= INTERVAL) {
-            timer = 0; // Сбрасываем таймер
-            shoot();
-        }
         // Очистка экрана
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
@@ -282,8 +271,13 @@ public class GameScreen implements Screen {
             game.batch.draw(enemyTexture, enemy.x, enemy.y, enemy.width, enemy.height);
         }
         // Пули
+        float textureBaseRotationBullet = 90;;
         for (Bullet bullet : bullets) {
-            game.batch.draw(bulletTexture, bullet.rect.x, bullet.rect.y, bullet.rect.width, bullet.rect.height);
+            game.batch.draw(bulletTexture,
+                bullet.rect.x,
+                bullet.rect.y,
+                bullet.rect.width,
+                bullet.rect.height);
         }
         // KUSTS
         for (Rectangle kust : kusts) {
@@ -703,6 +697,24 @@ public class GameScreen implements Screen {
         font = new BitmapFont();
         font.getData().setScale(3f); // Увеличиваем размер
         font.setColor(Color.WHITE); // Белый цвет
+    }
+
+    public void checkPlatform() {
+        Application.ApplicationType appType = Gdx.app.getType();
+        float delta = 0.009f;
+        switch (appType) {
+            case Desktop:
+            default:
+                break;
+            case Android:
+                timer += delta; // Увеличиваем таймер на время, прошедшее с прошлого кадра
+
+                if (timer >= INTERVAL) {
+                    timer = 0; // Сбрасываем таймер
+                    shoot();
+                }
+                break;
+        }
     }
 
     @Override
