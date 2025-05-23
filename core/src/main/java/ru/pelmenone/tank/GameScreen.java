@@ -301,32 +301,6 @@ public class GameScreen implements Screen {
             game.batch.setColor(Color.WHITE); // Возвращаем обычный цвет
 
         }
-
-        font.draw(game.batch, "enemies: " + enemiesRemaining, 20, 450);
-
-        if (isFireButtonPressed) {
-            game.batch.setColor(0.7f, 0.7f, 0.7f, 0.7f); // Темнее при нажатии
-        } else {
-            game.batch.setColor(1, 1, 1, 0.7f); // Полупрозрачная
-        }
-
-        game.batch.draw(fireButtonTexture,
-            fireButtonBounds.x,
-            fireButtonBounds.y,
-            fireButtonBounds.width,
-            fireButtonBounds.height);
-
-        // Возвращаем стандартный цвет
-        game.batch.setColor(Color.WHITE);
-
-        // Рисуем букву "E" по центру кнопки
-        String eText = "SPACE";
-        float textWidth = font.getData().getGlyph('E').width * font.getScaleX();
-        float textHeight = font.getCapHeight() * font.getScaleY();
-        font.draw(game.batch, eText,
-            fireButtonBounds.x + (fireButtonBounds.width - textWidth)/2,
-            fireButtonBounds.y + (fireButtonBounds.height + textHeight)/2);
-
         game.batch.end();
     }
 
@@ -351,21 +325,6 @@ public class GameScreen implements Screen {
         }
 
         isFireButtonPressed = false;
-
-        // Проверяем все точки касания (мультитач)
-        for (int i = 0; i < 5; i++) {
-            if (Gdx.input.isTouched(i)) {
-                Vector3 touchPos = new Vector3(Gdx.input.getX(i), Gdx.input.getY(i), 0);
-                camera.unproject(touchPos); // Переводим в игровые координаты
-
-                if (fireButtonBounds.contains(touchPos.x, touchPos.y)) {
-                    isFireButtonPressed = true;
-                    shoot();
-                }
-            }
-        }
-
-        timeSinceLastShot += delta;
 
         // рулить танком
         handleInput(delta);
@@ -474,6 +433,20 @@ public class GameScreen implements Screen {
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) && timeSinceLastShot >= shootDelay) {
             shoot();
             timeSinceLastShot = 0;
+        }
+
+        // Проверяем все точки касания (мультитач)
+        for (int i = 0; i < 5; i++) {
+            if (Gdx.input.isTouched(i)) {
+                Vector3 touchPos = new Vector3(Gdx.input.getX(i), Gdx.input.getY(i), 0);
+                camera.unproject(touchPos); // Переводим в игровые координаты
+
+                if (fireButtonBounds.contains(touchPos.x, touchPos.y) && timeSinceLastShot >= shootDelay) {
+                    isFireButtonPressed = true;
+                    shoot();
+                    timeSinceLastShot = 0;
+                }
+            }
         }
 
         // для мобилы
