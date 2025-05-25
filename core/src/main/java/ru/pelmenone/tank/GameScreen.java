@@ -36,6 +36,7 @@ public class GameScreen implements Screen {
     private Texture bulletTexture;
     private Texture wallTexture;
     private Texture kustTexture;
+    private Texture waterTexture;
     private Texture backgroundTexture;
     private Texture backgroundTexture2;
     private Texture buttonTexture;
@@ -56,6 +57,7 @@ public class GameScreen implements Screen {
     private Array<Rectangle> enemies;
     private Array<Rectangle> walls;
     private Array<Rectangle> kusts;
+    private Array<Rectangle> waters;
     private Array<Bullet> bullets;
 
     // управление
@@ -103,6 +105,7 @@ public class GameScreen implements Screen {
         backgroundTexture = new Texture("background.png");
         joystickBgTexture = new Texture(Gdx.files.internal("joystick_bg.png"));
         joystickKnobTexture = new Texture(Gdx.files.internal("joystick_knob.png"));
+        waterTexture = new Texture(Gdx.files.internal("water.png"));
         playerTank = new Rectangle(100, 100, 80, 80);
 
         // Инициализация игрока
@@ -121,6 +124,8 @@ public class GameScreen implements Screen {
         createWalls();
         kusts = new Array<>();
         createKusts();
+        waters = new Array<>();
+        createWaters();
 
         // Инициализация пуль
         bullets = new Array<>();
@@ -230,11 +235,22 @@ public class GameScreen implements Screen {
         // kusts вертик
         for (int i = 0; i < 5; i++) {
             Rectangle kust = new Rectangle();
-            kust.x = 40;
+            kust.x = 80;
             kust.y = 60 + i * 40;
             kust.width = 40;
             kust.height = 40;
             kusts.add(kust);
+        }
+    }
+
+    private void createWaters() {
+        for (int i = 0; i < 5; i++) {
+            Rectangle water = new Rectangle();
+            water.x = 440;
+            water.y = 0 + i * 40;
+            water.width = 40;
+            water.height = 40;
+            waters.add(water);
         }
     }
 
@@ -274,10 +290,15 @@ public class GameScreen implements Screen {
             tankTexture.getWidth(), tankTexture.getHeight(), // Размер текстуры
             false, false);                       // Отражать по X/Y?
 
+        //water
+        for (Rectangle water : waters) {
+            game.batch.draw(waterTexture, water.x, water.y, water.width, water.height);
+        }
         // Враги
         for (Rectangle enemy : enemies) {
             game.batch.draw(enemyTexture, enemy.x, enemy.y, enemy.width, enemy.height);
         }
+
         // Пули
         float textureBaseRotationBullet = 90;;
         for (Bullet bullet : bullets) {
@@ -618,6 +639,33 @@ public class GameScreen implements Screen {
                     enemy.y += push.y * 1f;
                 }
             }
+
+            for (Rectangle water : waters) {
+                if (enemy.overlaps(water)) {
+                    Vector2 push = new Vector2();
+
+                    float overlapX = Math.min(
+                        enemy.x + enemy.width - water.x,
+                        water.x + water.width - enemy.x
+                    );
+
+                    float overlapY = Math.min(
+                        enemy.y + enemy.height - water.y,
+                        water.y + water.height - enemy.y
+                    );
+
+                    // Отталкиваем по меньшему пересечению
+                    if (overlapX < overlapY) {
+                        push.x = (enemy.x < water.x) ? -overlapX : overlapX;
+                    } else {
+                        push.y = (enemy.y < water.y) ? -overlapY : overlapY;
+                    }
+
+                    // Применяем отталкивание
+                    enemy.x += push.x * 1f;
+                    enemy.y += push.y * 1f;
+                }
+            }
         }
     }
 
@@ -662,6 +710,21 @@ public class GameScreen implements Screen {
                 playerTank.x -= 1;
             }
             if (playerTank.overlaps(wall)) {
+                playerTank.x += 1;
+            }
+        }
+        // Проверка столкновений игрока с water
+        for (Rectangle water : waters) {
+            if (playerTank.overlaps(water)) {
+                playerTank.y -= 1;
+            }
+            if (playerTank.overlaps(water)) {
+                playerTank.y += 1;
+            }
+            if (playerTank.overlaps(water)) {
+                playerTank.x -= 1;
+            }
+            if (playerTank.overlaps(water)) {
                 playerTank.x += 1;
             }
         }
@@ -786,11 +849,6 @@ public class GameScreen implements Screen {
         font.setColor(Color.WHITE); // Белый цвет
     }
 
-    public void stop() {
-        boolean moved = false;
-        moved = false;
-    }
-
     public void checkPlatform() {
         Application.ApplicationType appType = Gdx.app.getType();
         float delta = 0.009f;
@@ -832,6 +890,7 @@ public class GameScreen implements Screen {
         bulletTexture.dispose();
         wallTexture.dispose();
         kustTexture.dispose();
+        waterTexture.dispose();
         sounds.dispose();
         backgroundTexture.dispose();
         font.dispose();
