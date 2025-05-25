@@ -30,10 +30,6 @@ public class GameScreen implements Screen {
     private MovementDirection currentDirection = MovementDirection.NONE;
     private MovementDirection lastPressedDirection = MovementDirection.NONE;
 
-    // мир
-    private static final float WORLD_WIDTH = 1280; // Логическая ширина мира
-    private static final float WORLD_HEIGHT = 720; // Логическая высота
-
     // текстуры
     private Texture tankTexture;
     private Texture enemyTexture;
@@ -45,6 +41,8 @@ public class GameScreen implements Screen {
     private Texture buttonTexture;
     private Texture whiteTexture;
     private Rectangle restartButton;
+    private Texture joystickBgTexture;
+    private Texture joystickKnobTexture;
 
     // звуки
     private SoundManager sounds;
@@ -65,6 +63,14 @@ public class GameScreen implements Screen {
     private float playerSpeed = 100f;
     private float timeSinceLastShot = 0;
     private float shootDelay = 0.6f;
+
+    // joystick
+    private Vector2 joystickCenter = new Vector2();
+    private Vector2 joystickKnobPos = new Vector2();
+    private float joystickRadius = 50f;
+    private float joystickKnobRadius = 30f;
+    private boolean joystickActive = false;
+    private int joystickPointer = -1;
 
     // кнопка
     private Texture fireButtonTexture;
@@ -95,6 +101,8 @@ public class GameScreen implements Screen {
         kustTexture = new Texture("kust.png");
         backgroundTexture2 = new Texture("background2.png");
         backgroundTexture = new Texture("background.png");
+        joystickBgTexture = new Texture(Gdx.files.internal("joystick_bg.png"));
+        joystickKnobTexture = new Texture(Gdx.files.internal("joystick_knob.png"));
         playerTank = new Rectangle(100, 100, 80, 80);
 
         // Инициализация игрока
@@ -286,6 +294,19 @@ public class GameScreen implements Screen {
         font.draw(game.batch, "enemies: " + enemiesRemaining, 10, 480);
         font.draw(game.batch, "FIRE", 650, 70);
 
+        // joystick
+        game.batch.draw(joystickBgTexture,
+            joystickCenter.x - joystickRadius,
+            joystickCenter.y - joystickRadius,
+            joystickRadius * 2,
+            joystickRadius * 2);
+
+        game.batch.draw(joystickKnobTexture,
+            joystickKnobPos.x - joystickKnobRadius,
+            joystickKnobPos.y - joystickKnobRadius,
+            joystickKnobRadius * 2,
+            joystickKnobRadius * 2);
+
         if (gameWon) {
             font.draw(game.batch, "WIN", camera.viewportWidth/2 - 30, camera.viewportHeight/2);
 
@@ -336,6 +357,43 @@ public class GameScreen implements Screen {
                 camera.unproject(touchPos); // Конвертируем в игровые координаты
             }
         }
+        if (joystickActive) {
+            // Вектор направления джойстика
+            Vector2 direction = new Vector2(
+                joystickKnobPos.x - joystickCenter.x,
+                joystickKnobPos.y - joystickCenter.y
+            );
+
+            if (Math.abs(direction.x) > 20f) {
+                float turnSpeed = direction.x / joystickRadius * 180f;
+                tankRotation = 0;
+            }
+            if (direction.y > 20f) {
+                moveUpJoystick(Math.min(1, direction.y / joystickRadius));
+                tankRotation = 90;
+            }
+            else if (direction.y < -20f) {
+                moveDownJoystick(Math.min(1, -direction.y / joystickRadius));
+                tankRotation = 270;
+            }
+            else if (direction.x > 20f) {
+                moveRightJoystick(Math.min(1, direction.x / joystickRadius));
+                tankRotation = 0;
+            }
+            else if (direction.x < 20f) {
+                moveLeftJoystick(Math.min(1, direction.x / joystickRadius));
+                tankRotation = 180;
+            }
+
+            } else {
+                moveDown = false;
+                moveUp = false;
+                moveRight= false;
+                moveLeft = false;
+            }
+
+
+
 
         timeSinceLastShot += delta;
 
@@ -360,6 +418,27 @@ public class GameScreen implements Screen {
 
         playerTank.x = 100;
         playerTank.y = 100;
+    }
+
+    public void moveUpJoystick(float power) {
+        float angleRad = (float)Math.toRadians(tankRotation);
+        playerTank.y += 0.7f;
+        lastPressedDirection = MovementDirection.UP;
+    }
+    public void moveDownJoystick(float power) {
+        float angleRad = (float)Math.toRadians(tankRotation);
+        playerTank.y -= 0.7f;
+        lastPressedDirection = MovementDirection.DOWN;
+    }
+    public void moveRightJoystick(float power) {
+        float angleRad = (float) Math.toRadians(tankRotation);
+        playerTank.x += 0.7f;
+        lastPressedDirection = MovementDirection.RIGHT;
+    }
+    public void moveLeftJoystick(float power) {
+        float angleRad = (float)Math.toRadians(tankRotation);
+        playerTank.x -= 0.7f;
+        lastPressedDirection = MovementDirection.LEFT;
     }
 
     private void handleInput(float delta) {
@@ -424,10 +503,6 @@ public class GameScreen implements Screen {
         playerTank.x = Math.max(0, Math.min(800 - playerTank.width, playerTank.x));
         playerTank.y = Math.max(0, Math.min(480 - playerTank.height, playerTank.y));
 
-        if (playerTank.x < 0) playerTank.x = 0;
-        if (playerTank.x > 800 - playerTank.width) playerTank.x = 800 - playerTank.width;
-        if (playerTank.y < 0) playerTank.y = 0;
-        if (playerTank.y > 480 - playerTank.height) playerTank.y = 480 - playerTank.height;
 
         // стрельба
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) && timeSinceLastShot >= shootDelay) {
@@ -448,26 +523,8 @@ public class GameScreen implements Screen {
                 }
             }
         }
-
-        // для мобилы
-        if (Gdx.input.isTouched()) {
-            Vector3 touchPos = new Vector3();
-            touchPos.set(Gdx.input.getX(), Gdx.input.getY(), 0);
-            camera.unproject(touchPos);
-
-            if (touchPos.y > playerTank.y + playerTank.height/2) {
-                playerTank.y += playerSpeed * delta;
-            } else if (touchPos.y < playerTank.y + playerTank.height/2) {
-                playerTank.y -= playerSpeed * delta;
-            }
-
-            if (touchPos.x > playerTank.x + playerTank.width/2) {
-                playerTank.x += playerSpeed * delta;
-            } else if (touchPos.x < playerTank.x + playerTank.width/2) {
-                playerTank.x -= playerSpeed * delta;
-            }
-        }
     }
+
 
     private void shoot() {
         Bullet bullet = new Bullet();
@@ -507,7 +564,6 @@ public class GameScreen implements Screen {
             bullet.rect.x += bullet.direction.x * bullet.speed * delta;
             bullet.rect.y += bullet.direction.y * bullet.speed * delta;
 
-            // Удаление пуль за пределами экрана
             if (bullet.rect.x < 0 || bullet.rect.x > 800 ||
                 bullet.rect.y < 0 || bullet.rect.y > 480) {
                 bullets.removeIndex(i);
@@ -524,28 +580,22 @@ public class GameScreen implements Screen {
         }
 
         for (Rectangle enemy : enemies) {
-            // Рассчитываем направление к игроку
             Vector2 direction = new Vector2(
                 playerTank.x - enemy.x,
                 playerTank.y - enemy.y
-            ).nor(); // Нормализуем вектор
+            ).nor();
 
-            // Сохраняем старую позицию
             float oldX = enemy.x;
             float oldY = enemy.y;
 
-            // Двигаем врага
             float enemySpeed = 0;
             enemy.x += direction.x * enemySpeed * delta;
             enemy.y += direction.y * enemySpeed * delta;
 
-            // Проверка столкновений со стенами
             for (Rectangle wall : walls) {
                 if (enemy.overlaps(wall)) {
-                    // Вычисляем вектор отталкивания
                     Vector2 push = new Vector2();
 
-                    // Определяем сторону столкновения
                     float overlapX = Math.min(
                         enemy.x + enemy.width - wall.x,
                         wall.x + wall.width - enemy.x
@@ -603,24 +653,39 @@ public class GameScreen implements Screen {
         // Проверка столкновений игрока со стенами
         for (Rectangle wall : walls) {
             if (playerTank.overlaps(wall)) {
-                if (moveUp) playerTank.y -= 1;
-                if (moveDown) playerTank.y += 1;
-                if (moveLeft) playerTank.x += 1;
-                if (moveRight) playerTank.x -= 1;
+                playerTank.y -= 1;
+            }
+            if (playerTank.overlaps(wall)) {
+                playerTank.y += 1;
+            }
+            if (playerTank.overlaps(wall)) {
+                playerTank.x -= 1;
+            }
+            if (playerTank.overlaps(wall)) {
+                playerTank.x += 1;
             }
         }
+
         for (Rectangle enemies: enemies){
+            if (enemies.overlaps(playerTank)) {
+                playerTank.y -= 1;
+            }
             if (playerTank.overlaps(enemies)) {
-                if (moveUp) playerTank.y -= 1;
-                if (moveDown) playerTank.y += 1;
-                if (moveLeft) playerTank.x += 1;
-                if (moveRight) playerTank.x -= 1;
+                playerTank.y += 1;
+            }
+            if (playerTank.overlaps(enemies)) {
+                playerTank.x -= 1;
+            }
+            if (playerTank.overlaps(enemies)) {
+                playerTank.x += 1;
             }
         }
     }
 
     @Override
     public void show() {
+        joystickCenter.set(joystickRadius + 50, joystickRadius + 50);
+        joystickKnobPos.set(joystickCenter);
         // Обработка ввода
         Gdx.input.setInputProcessor(new InputAdapter() {
             @Override
@@ -638,6 +703,55 @@ public class GameScreen implements Screen {
                 if (keycode == Input.Keys.DOWN) moveDown = false;
                 if (keycode == Input.Keys.LEFT) moveLeft = false;
                 if (keycode == Input.Keys.RIGHT) moveRight = false;
+                return true;
+            }
+
+            @Override
+            public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+                Vector3 touchPos = new Vector3(screenX, screenY, 0);
+                camera.unproject(touchPos);
+
+                // Активация джойстика при касании в его области
+                if (new Vector2(touchPos.x, touchPos.y).dst(joystickCenter) < joystickRadius * 2) {
+                    joystickActive = true;
+                    joystickPointer = pointer;
+                }
+                return true;
+            }
+
+            @Override
+            public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+                if (pointer == joystickPointer) {
+                    joystickActive = false;
+                    joystickKnobPos.set(joystickCenter); // Возвращаем джойстик в центр
+                    joystickPointer = -1;
+                }
+                return true;
+            }
+
+            @Override
+            public boolean touchDragged(int screenX, int screenY, int pointer) {
+                if (joystickActive && pointer == joystickPointer) {
+                    Vector3 touchPos = new Vector3(screenX, screenY, 0);
+                    camera.unproject(touchPos);
+
+                    // Вычисляем вектор от центра джойстика до касания
+                    Vector2 direction = new Vector2(
+                        touchPos.x - joystickCenter.x,
+                        touchPos.y - joystickCenter.y
+                    );
+
+                    // Ограничиваем длину вектора радиусом джойстика
+                    if (direction.len() > joystickRadius) {
+                        direction.nor().scl(joystickRadius);
+                    }
+
+                    // Устанавливаем новую позицию ручки джойстика
+                    joystickKnobPos.set(
+                        joystickCenter.x + direction.x,
+                        joystickCenter.y + direction.y
+                    );
+                }
                 return true;
             }
         });
@@ -670,6 +784,11 @@ public class GameScreen implements Screen {
         font = new BitmapFont();
         font.getData().setScale(3f); // Увеличиваем размер
         font.setColor(Color.WHITE); // Белый цвет
+    }
+
+    public void stop() {
+        boolean moved = false;
+        moved = false;
     }
 
     public void checkPlatform() {

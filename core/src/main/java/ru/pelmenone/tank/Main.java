@@ -19,21 +19,11 @@ public class Main extends Game {
         batch = new SpriteBatch();
         setScreen(new GameScreen(this));
 
-        float virtualWidth = 1280;
-        float virtualHeight = 720;
-
         camera = new OrthographicCamera();
-        // Используем FitViewport для автоматического масштабирования
-        viewport = new FitViewport(virtualWidth, virtualHeight, camera);
-        viewport.apply();
-
-        setScreen(new GameScreen(this));
     }
 
     @Override
     public void resize(int width, int height) {
-        viewport.update(width, height);
-        camera.position.set(camera.viewportWidth/2, camera.viewportHeight/2, 0);
     }
 
     @Override
